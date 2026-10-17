@@ -1,0 +1,9 @@
+raw_data_path: data/raw/rawdata.csv
+processed_dir: data/processed/
+artifacts_dir: artifacts/
+figures_dir: outputs/figures/
+tables_dir: outputs/tables/
+
+random_state: 42
+test_size: 0.2
+cv_folds: 5
