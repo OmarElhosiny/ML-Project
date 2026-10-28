@@ -1,10 +1,10 @@
-﻿# Dataset: keep data local, keep folder structure
+# Dataset: keep data local, keep folder structure
 data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
 
-# Saved models
+# Saved models (anywhere in the repo)
 artifacts/*
 !artifacts/.gitkeep
 *.joblib
@@ -22,6 +22,9 @@ env/
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Notebook data outputs
+notebooks/*.csv
 
 # IDE
 .vscode/
