@@ -1,17 +1,20 @@
-from src.data.load import load_data
+from src.data.load import load_raw_data
 
-def audit_data():
-    df = load_data()
 
+def audit_data(df):
     print("\nData Types:")
     print(df.dtypes)
+
     print("\nDuplicate Rows:")
     print(df.duplicated().sum())
+
     print("\nCardinality:")
     print(df.nunique())
+
     print("\nSuspicious Values:")
     print("Negative LeadTime:", (df["LeadTime"] < 0).sum())
     print("Negative ADR:", (df["ADR"] < 0).sum())
+
     print("Zero Guests:", (
         (df["Adults"] + df["Children"].fillna(0) + df["Babies"]) == 0
     ).sum())
@@ -24,6 +27,7 @@ def audit_data():
     print("Invalid IsCanceled:", (
         ~df["IsCanceled"].isin([0, 1])
     ).sum())
+
     print("\nADR and LeadTime Outliers:")
 
     for col in ["ADR", "LeadTime"]:
@@ -43,13 +47,15 @@ def audit_data():
         print("Lower Bound:", lower)
         print("Upper Bound:", upper)
         print("Outliers:", len(outliers))
-        print("\nDuplicate Investigation:")
 
+    print("\nDuplicate Investigation:")
     print("Total Rows:", len(df))
     print("Duplicate Rows:", df.duplicated().sum())
     print("Unique Rows:", len(df.drop_duplicates()))
-    
+
     return df
 
+
 if __name__ == "__main__":
-    data = audit_data()
+    df = load_raw_data()
+    audit_data(df)
