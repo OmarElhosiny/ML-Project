@@ -5,7 +5,7 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 
 from src.data.load import load_raw_data
-from src.features.feature_selection import SET_A_FEATURES
+from src.features.feature_selection import SET_A_FEATURES, SET_B_FEATURES
 from src.preprocessing.pipeline import clean_data
 from src.preprocessing.split import split_data
 from src.preprocessing.transform import create_preprocessor
@@ -20,16 +20,23 @@ def create_xgb_regressor(config):
     )
 
 
-def train_xgb_regression(config):
+def train_xgb_regression(config, feature_set="A"):
+    if feature_set not in ("A", "B"):
+        raise ValueError("feature_set must be A or B")
+
     df = clean_data(load_raw_data(), task="regression")
 
-    X = df[SET_A_FEATURES].copy()
+    features = (
+        SET_A_FEATURES if feature_set == "A" else SET_B_FEATURES
+    )
+
+    X = df[features].copy()
     y = df["ADR"].copy()
 
-    # Use the team's shared split; keep the test set untouched
+    # Shared split: keep the final test set untouched
     X_dev, X_test, y_dev, y_test = split_data(X, y)
 
-    # Create validation data from the development set
+    # Create validation data from development data only
     X_train, X_val, y_train, y_val = train_test_split(
         X_dev,
         y_dev,
@@ -42,7 +49,7 @@ def train_xgb_regression(config):
         ("regressor", create_xgb_regressor(config)),
     ])
 
-    print("Training XGBoost...")
+    print(f"Training XGBoost with Set {feature_set}...")
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_val)
@@ -50,6 +57,7 @@ def train_xgb_regression(config):
     results = pd.DataFrame([{
         "model": "XGBoost Regressor",
         "configuration": "untuned",
+        "feature_set": feature_set,
         "features": X.shape[1],
         "evaluation_set": "validation",
         "random_state": config["random_state"],
@@ -60,13 +68,15 @@ def train_xgb_regression(config):
         "R2": r2_score(y_val, y_pred),
     }])
 
-    output_path = (
-        PROJECT_ROOT
-        / config["tables_dir"]
-        / "xgb_regression_baseline.csv"
+    filename = (
+        "xgb_regression_baseline.csv"
+        if feature_set == "A"
+        else "xgb_regression_baseline_set_b.csv"
     )
 
+    output_path = PROJECT_ROOT / config["tables_dir"] / filename
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     results.to_csv(output_path, index=False)
 
     print(results.round(4).to_string(index=False))
