@@ -1,3 +1,3 @@
 actual_class,predicted_not_canceled,predicted_canceled
-actual_not_canceled,6619,786
-actual_canceled,1558,1646
+actual_not_canceled,6601,804
+actual_canceled,1595,1609

@@ -1,2 +1,2 @@
-model,configuration,feature_set,features,evaluation_set,random_state,training_rows,validation_rows,Accuracy,Precision,Recall,F1,ROC_AUC
-XGBoost Classifier,untuned,A,21,validation,42,31825,10609,0.779055518899048,0.6768092105263158,0.5137328339575531,0.5841022001419447,0.8484822946671151
+model,configuration,feature_set,features,evaluation_set,split_strategy,random_state,training_rows,validation_rows,Accuracy,Precision,Recall,F1,ROC_AUC
+XGBoost Classifier,untuned,A,21,validation,stratified,42,31825,10609,0.7738712413988124,0.6668048072938251,0.5021847690387016,0.5729036852412319,0.8442898436373845
