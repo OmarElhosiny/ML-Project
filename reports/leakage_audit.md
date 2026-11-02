@@ -108,9 +108,14 @@ MAE 9.77, RMSE 14.98, R² 0.857.
   leak; the difference is moderate, so the column is kept and will be
   re-checked in Milestone 2.
 
-**Baseline result (XGBoost, default parameters, validation set, Set A):**
-Accuracy 0.779, Precision 0.677, Recall 0.514, F1 0.584, ROC-AUC 0.848.
-Set B results will be updated after the parking column is removed.
+**Baseline results (XGBoost, default parameters, validation set):**
+
+| Features | F1 | ROC-AUC |
+|---|---|---|
+| Set A | 0.589 | 0.848 |
+| Set B (Set A + `TotalOfSpecialRequests`) | 0.671 | 0.882 |
+
+Set B is used for classification.
 
 ---
 
@@ -153,4 +158,4 @@ Set B results will be updated after the parking column is removed.
 
 The split is random, not time-based. Bookings from 2015–2017 are mixed, so the
 model can learn from bookings that arrive later than some validation bookings.
-A time-based split would be stricter; this will be discussed in Milestone 2. 
+A time-based split would be stricter; this will be discussed in Milestone 2.
