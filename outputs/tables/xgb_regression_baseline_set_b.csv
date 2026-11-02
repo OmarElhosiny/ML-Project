@@ -1,0 +1,2 @@
+model,configuration,feature_set,features,evaluation_set,random_state,training_rows,validation_rows,MAE,RMSE,R2
+XGBoost Regressor,untuned,B,23,validation,42,31392,10464,9.84175901421098,15.1077506498784,0.8548803983754283
