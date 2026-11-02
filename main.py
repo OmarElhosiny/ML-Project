@@ -28,6 +28,9 @@ def run_training(config, args):
     if args.task in ("regression", "all"):
         from src.models.regression.xgb_model import train_xgb_regression
         train_xgb_regression(config)
+    if args.task in ("classification", "all"):
+        from src.models.classification.xgb_model import train_xgb_classification
+        train_xgb_classification(config)
 
 
 def run_clustering(config, args):
