@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import adjusted_rand_score
+from sklearn.metrics import davies_bouldin_score
 import joblib
 
 def prepare_kmeans_data(feature_set="baseline"):
     df = load_raw_data()
     df = clean_data(df)
+    df = df[df["ADR"] != 5400].reset_index(drop=True)
 
     df["TotalGuests"] = df["Adults"] + df["Children"] + df["Babies"]
     df["TotalNights"] = df["StaysInWeekendNights"] + df["StaysInWeekNights"]
@@ -40,7 +42,7 @@ def prepare_kmeans_data(feature_set="baseline"):
             "Adults",
             "Children",
             "TotalNights"
-        ]    
+        ]
     else:
         raise ValueError("Unknown feature set")
 
@@ -75,7 +77,7 @@ def run_Kmeans(feature_set="baseline", k=3):
     for i in range(model.n_clusters):
         print(f"Clusters {i}: {(labels == i).sum()} bookings")
     return model, labels
-    
+
 
 def elbow_method(feature_set="baseline"):
     X_scaled = prepare_kmeans_data(feature_set)
@@ -105,12 +107,43 @@ def silhouette_method(feature_set="baseline"):
     for k in range(2,9):
         model = KMeans(n_clusters=k, random_state=42, n_init=10)
         labels = model.fit_predict(X_scaled)
-        score = silhouette_score(X_scaled, labels, sample_size=5000, random_state=42)
+        score = silhouette_score(X_scaled, labels, sample_size=10000, random_state=42)
         print(f"K = {k}, Silhouette Score = {score:.4f}")
+
+
+def evaluate_clustering(feature_set="experiment3"):
+    X_scaled = prepare_kmeans_data(feature_set)
+    results = []
+
+    for k in range(2,9):
+        model = KMeans(n_clusters=k, random_state=42, n_init=10)
+        labels = model.fit_predict(X_scaled)
+
+        sil = silhouette_score(X_scaled, labels, sample_size=10000, random_state=42)
+        dbi = davies_bouldin_score(X_scaled, labels)
+
+        print(f"K = {k}, Silhouette = {sil:.4f}, Davies-Bouldin = {dbi:.4f}")
+
+        results.append({
+            "Feature_Set": feature_set,
+            "K": k,
+            "Silhouette": sil,
+            "Davies_Bouldin": dbi
+        })
+
+    import pandas as pd
+    Path("outputs/tables").mkdir(parents=True, exist_ok=True)
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(f"outputs/tables/kmeans_evaluation_{feature_set}.csv", index=False)
+
+    print("\nEvaluation results saved successfully!")
+    return results_df
 
 def analyze_clusters(k=2, feature_set="baseline"):
     df = load_raw_data()
     df = clean_data(df)
+    df = df[df["ADR"] != 5400].reset_index(drop=True)
+
     X_scaled = prepare_kmeans_data(feature_set)
     model = KMeans(n_clusters=k, random_state=42, n_init=10)
     labels = model.fit_predict(X_scaled)
@@ -168,6 +201,7 @@ def visualize_clusters(k=4, feature_set="experiment3"):
 def save_final_kmeans():
     df = load_raw_data()
     df = clean_data(df)
+    df = df[df["ADR"] != 5400].reset_index(drop=True)
 
     df["TotalNights"] = df["StaysInWeekendNights"] + df["StaysInWeekNights"]
 
@@ -208,6 +242,7 @@ def test_saved_kmeans():
 
     df = load_raw_data()
     df = clean_data(df)
+    df = df[df["ADR"] != 5400].reset_index(drop=True)
 
     df["TotalNights"] = df["StaysInWeekendNights"] + df["StaysInWeekNights"]
 
@@ -222,7 +257,7 @@ def test_saved_kmeans():
 
     print("\nPredicted Clusters:")
     for i in range(len(predictions)):
-        print(f"Booking {i + 1}: Cluster {predictions[i]}")        
+        print(f"Booking {i + 1}: Cluster {predictions[i]}")
 
 if __name__ == "__main__":
-    test_saved_kmeans()
+    analyze_clusters(k=4, feature_set="experiment3")
