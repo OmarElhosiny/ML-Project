@@ -1,0 +1,2 @@
+model,configuration,feature_set,features,evaluation_set,random_state,training_rows,validation_rows,Accuracy,Precision,Recall,F1,ROC_AUC
+XGBoost Classifier,untuned,A,21,validation,42,31825,10609,0.779055518899048,0.6768092105263158,0.5137328339575531,0.5841022001419447,0.8484822946671151
