@@ -179,18 +179,18 @@ def analyze_clusters(k=2, feature_set="experiment3"):
 def check_kmeans_stability():
     X_scaled = prepare_kmeans_data(feature_set="experiment3")
 
-    model = KMeans(n_clusters=4, random_state=42, n_init=10)
+    model = KMeans(n_clusters=6, random_state=42, n_init=10)
     original_labels = model.fit_predict(X_scaled)
 
     for seed in [10, 20, 30, 50]:
-        model = KMeans(n_clusters=4, random_state=seed, n_init=10)
+        model = KMeans(n_clusters=6, random_state=seed, n_init=10)
         labels = model.fit_predict(X_scaled)
 
         score = adjusted_rand_score(original_labels, labels)
         print(f"Random State = {seed}, ARI = {score:.4f}")
 
 
-def visualize_clusters(k=4, feature_set="experiment3"):
+def visualize_clusters(k=6, feature_set="experiment3"):
     df, summary = analyze_clusters(k=k, feature_set=feature_set)
 
     plt.figure(figsize=(9, 6))
@@ -223,7 +223,7 @@ def save_final_kmeans():
 
     X = df[features].copy()
 
-    model = KMeans(n_clusters=4, random_state=42, n_init=10)
+    model = KMeans(n_clusters=6, random_state=42, n_init=10)
     labels = model.fit_predict(X_scaled)
 
     Path("artifacts").mkdir(parents=True, exist_ok=True)
@@ -261,6 +261,5 @@ def test_saved_kmeans():
     for i in range(len(predictions)):
         print(f"Booking {i + 1}: Cluster {predictions[i]}")
 
-
 if __name__ == "__main__":
-    analyze_clusters(k=4, feature_set="experiment3")
+    analyze_clusters(k=6, feature_set="experiment3")
