@@ -89,4 +89,4 @@ documented in [`reports/leakage_audit.md`](reports/leakage_audit.md).
 ## Submission
 
 - GitHub: https://github.com/OmarElhosiny/ML-Project
-- Final commit SHA: `<sha>`
+- Final commit SHA: `4640d0ff3d67d02c3983d5e5bcf1934d51a42f8a`
