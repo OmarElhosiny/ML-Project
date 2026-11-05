@@ -1,9 +1,10 @@
+# garbohom 
 SET_A_FEATURES = [
     "LeadTime",
     "ArrivalDateYear",
     "ArrivalDateMonth",
-    "ArrivalDateWeekNumber",  
-    "ArrivalDateDayOfMonth",  
+    "ArrivalDateWeekNumber",
+    "ArrivalDateDayOfMonth",
     "StaysInWeekendNights",
     "StaysInWeekNights",
     "Adults",
@@ -26,3 +27,12 @@ SET_B_FEATURES = SET_A_FEATURES + [
     "TotalOfSpecialRequests",
     "RequiredCarParkingSpaces",
 ]
+
+SET_C_FEATURES = SET_A_FEATURES + [
+    "RequiredCarParkingSpaces",
+]
+
+SET_D_FEATURES = SET_A_FEATURES + [
+    "TotalOfSpecialRequests",
+]
+

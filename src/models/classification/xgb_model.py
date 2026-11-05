@@ -13,7 +13,12 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
 from src.data.load import load_raw_data
-from src.features.feature_selection import SET_A_FEATURES, SET_B_FEATURES
+from src.features.feature_selection import (
+    SET_A_FEATURES,
+    SET_B_FEATURES,
+    SET_C_FEATURES,
+    SET_D_FEATURES,
+)
 from src.preprocessing.pipeline import clean_data
 from src.preprocessing.split import split_data
 from src.preprocessing.transform import create_preprocessor
@@ -29,22 +34,27 @@ def create_xgb_classifier(config):
 
 
 def train_xgb_classification(config, feature_set="A"):
-    if feature_set not in ("A", "B"):
-        raise ValueError("feature_set must be A or B")
+    feature_sets = {
+        "A": SET_A_FEATURES,
+        "B": SET_B_FEATURES,
+        "C": SET_C_FEATURES,
+        "D": SET_D_FEATURES,
+    }
+
+    if feature_set not in feature_sets:
+        raise ValueError("feature_set must be A, B, C, or D")
 
     df = clean_data(load_raw_data(), task="classification")
 
-    features = (
-        SET_A_FEATURES if feature_set == "A" else SET_B_FEATURES
-    )
-
-    X = df[features].copy()
+    X = df[feature_sets[feature_set]].copy()
     y = df["IsCanceled"].copy()
 
-    # Reserve the final test set using the team's split
-    X_dev, X_test, y_dev, y_test = split_data(X, y)
+    # Shared stratified split: final test set stays untouched
+    X_dev, X_test, y_dev, y_test = split_data(
+        X, y, stratify=True
+    )
 
-    # Split development data into training and validation
+    # Same stratified validation split for every feature set
     X_train, X_val, y_train, y_val = train_test_split(
         X_dev,
         y_dev,
@@ -61,7 +71,7 @@ def train_xgb_classification(config, feature_set="A"):
     print(f"\nTraining XGBoost with Set {feature_set}...")
     model.fit(X_train, y_train)
 
-    # Evaluate validation data only
+    # Predict validation labels and cancellation probabilities
     y_pred = model.predict(X_val)
     y_prob = model.predict_proba(X_val)[:, 1]
 
@@ -71,6 +81,7 @@ def train_xgb_classification(config, feature_set="A"):
         "feature_set": feature_set,
         "features": X.shape[1],
         "evaluation_set": "validation",
+        "split_strategy": "stratified",
         "random_state": config["random_state"],
         "training_rows": len(X_train),
         "validation_rows": len(X_val),
@@ -90,12 +101,16 @@ def train_xgb_classification(config, feature_set="A"):
     output_dir = PROJECT_ROOT / config["tables_dir"]
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    suffix = "" if feature_set == "A" else "_set_b"
-
-    results.to_csv(
-        output_dir / f"xgb_classification_baseline{suffix}.csv",
-        index=False,
+    suffix = (
+        "" if feature_set == "A"
+        else f"_set_{feature_set.lower()}"
     )
+
+    results_path = (
+        output_dir / f"xgb_classification_baseline{suffix}.csv"
+    )
+
+    results.to_csv(results_path, index=False)
 
     confusion_table = pd.DataFrame(
         cm,
@@ -114,19 +129,26 @@ def train_xgb_classification(config, feature_set="A"):
     print("Rows = actual, columns = predicted; class order = [0, 1]")
     print(cm)
 
+    print(f"\nSaved: {results_path}")
+
     return model, results
 
 
 def compare_feature_sets(config):
-    _, results_a = train_xgb_classification(config, feature_set="A")
-    _, results_b = train_xgb_classification(config, feature_set="B")
+    all_results = []
 
-    comparison = pd.concat(
-        [results_a, results_b],
-        ignore_index=True,
-    )
+    for feature_set in ("A", "B", "C", "D"):
+        _, results = train_xgb_classification(
+            config,
+            feature_set=feature_set,
+        )
+        all_results.append(results)
+
+    comparison = pd.concat(all_results, ignore_index=True)
 
     output_dir = PROJECT_ROOT / config["tables_dir"]
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     comparison.to_csv(
         output_dir / "xgb_classification_feature_comparison.csv",
         index=False,
@@ -142,7 +164,7 @@ def compare_feature_sets(config):
         "ROC_AUC",
     ]
 
-    print("\nSet A vs Set B — Validation Results:")
+    print("\nSet A vs B vs C vs D — Validation Results:")
     print(comparison[columns].round(4).to_string(index=False))
 
     return comparison
