@@ -31,26 +31,57 @@ Every column is therefore judged by one question:
 | `AssignedRoomType` | Assigned at check-in, after the prediction point. | Bookings whose assigned room differs from the reserved room are canceled **5.3%** of the time vs **33.3%** otherwise: a room change mostly happens to guests who arrived |
 | `BookingChanges` | Counts changes made during the booking's life, so its final value is only known at the end. | Bookings with ≥ 1 change: **16.6%** canceled vs **32.9%** with none |
 | `RequiredCarParkingSpaces` | Parking is recorded when the guest arrives. | In the raw data, **0 of 1,926** bookings with parking were canceled (0.0%) vs 42.8% without parking |
+| `TotalOfSpecialRequests` | Only the final count is stored, not when each request was made. Requests can be added after booking, so bookings that reach arrival have more time to collect them. | Among canceled bookings, those canceled later in their life have more requests (0.41 → 0.62); bookings that arrived average 0.80. See below |
 | `Company` | Mostly missing ID code; no stable meaning as a number. | — |
 | `DaysInWaitingList` | Its final value depends on how long the booking stayed on the list after creation. Excluded to stay conservative. | — |
 
-### How `RequiredCarParkingSpaces` was found
+### How `RequiredCarParkingSpaces` and `TotalOfSpecialRequests` were found
 
-It was first included in **Set B** (Set A + `TotalOfSpecialRequests` +
+Both columns were first included in **Set B** (Set A + `TotalOfSpecialRequests` +
 `RequiredCarParkingSpaces`). Set B looked much better for classification
-(F1 0.584 → 0.681), so we tested each extra column on its own with the same
-model and split:
+(F1 0.573 → 0.678), so we added two more sets to test each extra column on its
+own, with the same model (XGBoost, default parameters) and the same stratified
+split. These results were produced at commit `1e973cf` and are saved in
+`outputs/tables/xgb_classification_feature_comparison.csv`:
 
-| Features | F1 | ROC-AUC |
-|---|---|---|
-| Set A | 0.589 | 0.848 |
-| Set A + `TotalOfSpecialRequests` | 0.671 | 0.882 |
-| Set A + `RequiredCarParkingSpaces` | 0.592 | 0.857 |
+| Set | Features | Accuracy | Precision | Recall | F1 | ROC-AUC |
+|---|---|---|---|---|---|---|
+| A | 21 base features | 0.774 | 0.667 | 0.502 | 0.573 | 0.844 |
+| B | A + parking + special requests | 0.818 | 0.729 | 0.633 | 0.678 | 0.888 |
+| C | A + parking | 0.783 | 0.681 | 0.528 | 0.595 | 0.853 |
+| D | A + special requests | 0.816 | 0.723 | 0.634 | 0.676 | 0.883 |
 
-Most of the gain came from `TotalOfSpecialRequests`. Parking added little
-because it appears in only about 3.6% of the cleaned bookings, but it is still removed because it
-reveals that the guest arrived. **Decision: Set B is redefined as Set A +
-`TotalOfSpecialRequests`.**
+Almost all of the gain comes from `TotalOfSpecialRequests` (Set D is within
+0.002 F1 of Set B). Parking alone adds little because it appears in only about
+3.6% of the cleaned bookings, but it is excluded because it reveals that the
+guest arrived.
+
+A gain this large from one column made us check *when* special requests are
+made. The dataset stores only the final count, so we looked at canceled
+bookings (deduplicated data, 16,049 canceled bookings) and grouped them by how much of their life (measured against
+`LeadTime`) had passed before they were canceled:
+
+| Canceled after this share of the booking's life | Mean special requests |
+|---|---|
+| 0–25% | 0.41 |
+| 25–50% | 0.53 |
+| 50–75% | 0.61 |
+| 75–100% | 0.62 |
+| Not canceled (guest arrived) | 0.80 |
+
+The longer a booking survives, the more requests it has. The same pattern holds
+inside every `LeadTime` band (for lead times above 180 days: 0.39 → 0.70), so
+it is not explained by lead time. This suggests requests accumulate after the
+booking is created, the same mechanism that makes `BookingChanges` leak. An
+alternative explanation is that committed guests both request more and cancel
+later; the data cannot separate the two, because request dates are not stored.
+
+**Decision: all supervised models use Set A only.** `TotalOfSpecialRequests`
+and `RequiredCarParkingSpaces` are excluded. We accept the lower F1
+(0.573 instead of 0.676) because we cannot show that the special-request count
+is known at the prediction point. Sets B, C and D were removed from
+`src/features/feature_selection.py` after this experiment; their results remain
+above as evidence.
 
 ---
 
@@ -77,8 +108,10 @@ reveals that the guest arrived. **Decision: Set B is redefined as Set A +
   (723 rows). The single `ADR = 5400` row is a room type A, 1 night, 2 adults,
   BB, March booking, while the next highest ADR in the whole dataset is 510, so
   it is treated as an input error.
-- Set B (+ `TotalOfSpecialRequests`) gave no improvement
-  (R² 0.857 vs 0.855), so the simpler Set A is kept.
+- Set B (+ `TotalOfSpecialRequests` + `RequiredCarParkingSpaces`) gave no
+  improvement (R² 0.857 vs 0.855, `outputs/tables/xgb_regression_baseline_set_b.csv`).
+  Both extra columns are also excluded for the leakage reasons in Section 2,
+  so Set A is used.
 
 **Baseline result (XGBoost, default parameters, validation set):**
 MAE 9.77, RMSE 14.98, R² 0.857.
@@ -87,7 +120,7 @@ MAE 9.77, RMSE 14.98, R² 0.857.
 
 ## 4. Classification task — target `IsCanceled`
 
-**Feature set used: Set B (Set A + `TotalOfSpecialRequests`).**
+**Feature set used: Set A (21 features), the same set as regression.**
 
 **Specific classification risks**
 
@@ -97,9 +130,10 @@ MAE 9.77, RMSE 14.98, R² 0.857.
   cancel (see the evidence in Section 2).
 - `ADR` is **not** used: it is the average rate over the stay and can be
   revised after booking. We exclude it to stay conservative.
-- `TotalOfSpecialRequests` is **kept with justification**: requests are usually
-  entered with the booking. We note that requests can also be added later;
-  this is a known limitation.
+- `TotalOfSpecialRequests` is **excluded**: the count is likely to grow while
+  the booking survives (evidence in Section 2). It was the strongest extra
+  feature (F1 0.573 → 0.676), which is exactly why we could not keep it
+  without proof that it is known at booking time.
 - `DepositType` is kept even though *Non Refund* bookings are canceled 97.2% of
   the time: the deposit type is chosen at booking, so it is a legitimate,
   strong signal, not leakage.
@@ -108,14 +142,10 @@ MAE 9.77, RMSE 14.98, R² 0.857.
   leak; the difference is moderate, so the column is kept and will be
   re-checked in Milestone 2.
 
-**Baseline results (XGBoost, default parameters, validation set):**
-
-| Features | F1 | ROC-AUC |
-|---|---|---|
-| Set A | 0.589 | 0.848 |
-| Set B (Set A + `TotalOfSpecialRequests`) | 0.671 | 0.882 |
-
-Set B is used for classification.
+**Baseline result (XGBoost, default parameters, validation set, Set A):**
+Accuracy 0.774, Precision 0.667, Recall 0.502, F1 0.573, ROC-AUC 0.844
+(`outputs/tables/xgb_classification_baseline.csv`).
+Full comparison of Sets A–D is in Section 2.
 
 ---
 
@@ -147,7 +177,7 @@ Set B is used for classification.
 | Step | How leakage is prevented |
 |---|---|
 | Duplicates | 25,902 duplicate rows are removed **before** splitting, so the same booking cannot appear in both train and test |
-| Split | 80% development / 20% test (`split_data`, `random_state=42`). The development part is split again 75% train / 25% validation. Classification uses `stratify` |
+| Split | 80% development / 20% test (`split_data`, `random_state=42`). The development part is split again 75% train / 25% validation. For classification **both** splits are stratified on `IsCanceled` (`split_data(X, y, stratify=True)`), so train, validation and test keep the same cancellation rate |
 | Test set | Not used in Milestone 1. Reserved for one final evaluation in Milestone 2 |
 | Imputation, encoding, scaling | Inside a scikit-learn `Pipeline` (`create_preprocessor`), so they are fitted on the training data only |
 | Unknown categories | `OneHotEncoder(handle_unknown="ignore")`: new categories at inference do not break the model and are not learned from validation/test |
