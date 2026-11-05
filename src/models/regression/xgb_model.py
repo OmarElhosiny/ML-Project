@@ -1,11 +1,12 @@
 import pandas as pd
+
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from xgboost import XGBRegressor
 
 from src.data.load import load_raw_data
-from src.features.feature_selection import SET_A_FEATURES, SET_B_FEATURES
+from src.features.feature_selection import SET_A_FEATURES
 from src.preprocessing.pipeline import clean_data
 from src.preprocessing.split import split_data
 from src.preprocessing.transform import create_preprocessor
@@ -20,20 +21,13 @@ def create_xgb_regressor(config):
     )
 
 
-def train_xgb_regression(config, feature_set="A"):
-    if feature_set not in ("A", "B"):
-        raise ValueError("feature_set must be A or B")
-
+def train_xgb_regression(config):
     df = clean_data(load_raw_data(), task="regression")
 
-    features = (
-        SET_A_FEATURES if feature_set == "A" else SET_B_FEATURES
-    )
-
-    X = df[features].copy()
+    X = df[SET_A_FEATURES].copy()
     y = df["ADR"].copy()
 
-    # Shared split: keep the final test set untouched
+    # Reserve the final test set
     X_dev, X_test, y_dev, y_test = split_data(X, y)
 
     # Create validation data from development data only
@@ -49,7 +43,7 @@ def train_xgb_regression(config, feature_set="A"):
         ("regressor", create_xgb_regressor(config)),
     ])
 
-    print(f"Training XGBoost with Set {feature_set}...")
+    print("Training XGBoost Regressor with Set A...")
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_val)
@@ -57,7 +51,7 @@ def train_xgb_regression(config, feature_set="A"):
     results = pd.DataFrame([{
         "model": "XGBoost Regressor",
         "configuration": "untuned",
-        "feature_set": feature_set,
+        "feature_set": "A",
         "features": X.shape[1],
         "evaluation_set": "validation",
         "random_state": config["random_state"],
@@ -68,15 +62,13 @@ def train_xgb_regression(config, feature_set="A"):
         "R2": r2_score(y_val, y_pred),
     }])
 
-    filename = (
-        "xgb_regression_baseline.csv"
-        if feature_set == "A"
-        else "xgb_regression_baseline_set_b.csv"
+    output_path = (
+        PROJECT_ROOT
+        / config["tables_dir"]
+        / "xgb_regression_baseline.csv"
     )
 
-    output_path = PROJECT_ROOT / config["tables_dir"] / filename
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
     results.to_csv(output_path, index=False)
 
     print(results.round(4).to_string(index=False))
