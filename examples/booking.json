@@ -1,0 +1,23 @@
+{
+  "LeadTime": 88,
+  "ArrivalDateYear": 2015,
+  "ArrivalDateMonth": "July",
+  "ArrivalDateWeekNumber": 27,
+  "ArrivalDateDayOfMonth": 1,
+  "StaysInWeekendNights": 0,
+  "StaysInWeekNights": 4,
+  "Adults": 2,
+  "Children": 0.0,
+  "Babies": 0,
+  "Meal": "BB       ",
+  "ReservedRoomType": "A               ",
+  "DepositType": "No Deposit     ",
+  "Country": "PRT",
+  "MarketSegment": "Online TA",
+  "DistributionChannel": "TA/TO",
+  "Agent": "9",
+  "CustomerType": "Transient",
+  "IsRepeatedGuest": 0,
+  "PreviousCancellations": 0,
+  "PreviousBookingsNotCanceled": 0
+}
