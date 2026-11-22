@@ -27,10 +27,14 @@ def run_training(config, args):
     """Train supervised models."""
     if args.task in ("regression", "all"):
         from src.models.regression.xgb_model import train_xgb_regression
+        from src.models.regression.random_forest_model import train_rf_regression
         train_xgb_regression(config)
+        train_rf_regression(config)
     if args.task in ("classification", "all"):
         from src.models.classification.xgb_model import train_xgb_classification
+        from src.models.classification.random_forest_model import train_rf_classification
         train_xgb_classification(config)
+        train_rf_classification(config)
 
 
 def run_clustering(config, args):
