@@ -1,0 +1,2 @@
+model,configuration,feature_set,features,evaluation_set,split_strategy,random_state,training_rows,validation_rows,Accuracy,Precision,Recall,F1,ROC_AUC
+Random Forest Classifier,untuned,A,21,validation,stratified,42,31825,10609,0.773776981807899,0.6593973037272006,0.5190387016229713,0.58085923856095,0.8348264239248543
