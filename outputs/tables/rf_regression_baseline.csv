@@ -1,0 +1,2 @@
+model,configuration,feature_set,features,evaluation_set,random_state,training_rows,validation_rows,MAE,RMSE,R2
+Random Forest Regressor,untuned,A,21,validation,42,31392,10464,8.430340467745824,14.702575528339255,0.8625599516943796
